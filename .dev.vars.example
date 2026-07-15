@@ -1,0 +1,8 @@
+# Copy to .dev.vars for local `wrangler dev` testing. Never commit the real file.
+
+# Full contents of the GCP service account JSON key file, as a single-line string.
+GA_SERVICE_ACCOUNT_KEY={"type":"service_account","client_email":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n", ...}
+
+# Optional shared secret. If set, requests to this Worker must include:
+#   Authorization: Bearer <MCP_AUTH_TOKEN>
+MCP_AUTH_TOKEN=choose-a-long-random-string
