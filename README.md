@@ -1,5 +1,7 @@
 # Google Analytics MCP server on Cloudflare Workers
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cchesebro-prog/GA_MCP_CF)
+
 A [Model Context Protocol](https://modelcontextprotocol.io) server that gives
 MCP clients (Claude, Gemini CLI, etc.) read access to Google Analytics 4 data,
 running as a Cloudflare Worker instead of the local `pipx run analytics-mcp`
@@ -12,6 +14,13 @@ local process can, this port authenticates with a **GCP service account key**
 stored as a Cloudflare secret: the Worker signs its own JWT (via the Workers
 Web Crypto API) and exchanges it for a Google OAuth2 access token on each
 cold start.
+
+> The button above clones this repo into your own GitHub account, provisions
+> a new Worker on your Cloudflare account, and wires up auto-deploy on every
+> push. It does **not** set the `GA_SERVICE_ACCOUNT_KEY` / `MCP_AUTH_TOKEN`
+> secrets for you — you still need to complete the Google Cloud setup below
+> and run the `wrangler secret put` commands in step 3 before the server can
+> actually reach Google Analytics.
 
 ## Tools exposed
 
