@@ -1,13 +1,21 @@
 import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import OAuthProvider, { type OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 import { z } from "zod";
 import * as ga from "./ga-client";
+import { oauthHandler } from "./oauth-handler";
 
 export interface Env {
   GA_SERVICE_ACCOUNT_KEY: string;
-  MCP_AUTH_TOKEN?: string;
+  MCP_LOGIN_PASSWORD?: string;
   MCP_OBJECT: DurableObjectNamespace;
+  OAUTH_KV: KVNamespace;
+  OAUTH_PROVIDER: OAuthHelpers;
 }
+
+// No per-user data flows through the OAuth props — every caller ends up
+// using the same GA service account, so props only need to prove "logged in".
+type Props = Record<string, never>;
 
 const propertyIdSchema = z
   .union([z.string(), z.number()])
@@ -41,10 +49,10 @@ const dateRangeSchema = z
       'Relative dates like "today", "yesterday", and "NdaysAgo" are supported by the API.'
   );
 
-export class GoogleAnalyticsMCP extends McpAgent<Env> {
+export class GoogleAnalyticsMCP extends McpAgent<Env, Record<string, never>, Props> {
   server = new McpServer({
     name: "Google Analytics MCP",
-    version: "0.1.0",
+    version: "0.2.0",
   });
 
   private key(): string {
@@ -242,31 +250,24 @@ export class GoogleAnalyticsMCP extends McpAgent<Env> {
   }
 }
 
-function isAuthorized(request: Request, env: Env): boolean {
-  if (!env.MCP_AUTH_TOKEN) return true; // no shared secret configured
-  const header = request.headers.get("Authorization") ?? "";
-  return header === `Bearer ${env.MCP_AUTH_TOKEN}`;
-}
-
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+// A single object fronting both transports so OAuthProvider's apiHandler
+// (which must be one handler) can still serve /mcp and /sse.
+const apiHandler = {
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
-
-    if (!isAuthorized(request, env)) {
-      return new Response("Unauthorized", { status: 401 });
-    }
-
-    if (url.pathname === "/mcp") {
-      return GoogleAnalyticsMCP.serve("/mcp").fetch(request, env, ctx);
-    }
     if (url.pathname === "/sse" || url.pathname === "/sse/message") {
       return GoogleAnalyticsMCP.serveSSE("/sse").fetch(request, env, ctx);
     }
-    if (url.pathname === "/" || url.pathname === "/health") {
-      return new Response("Google Analytics MCP server is running. Connect at /mcp (Streamable HTTP) or /sse (SSE).", {
-        status: 200,
-      });
-    }
-    return new Response("Not found", { status: 404 });
+    return GoogleAnalyticsMCP.serve("/mcp").fetch(request, env, ctx);
   },
 };
+
+export default new OAuthProvider({
+  apiHandler,
+  apiRoute: ["/mcp", "/sse"],
+  authorizeEndpoint: "/authorize",
+  tokenEndpoint: "/token",
+  clientRegistrationEndpoint: "/register",
+  defaultHandler: oauthHandler,
+  scopesSupported: ["analytics.readonly"],
+});

@@ -12,6 +12,12 @@
       }
     ]
   },
+  "kv_namespaces": [
+    {
+      "binding": "OAUTH_KV",
+      "id": "<run `npx wrangler kv namespace create OAUTH_KV` and paste the id here>"
+    }
+  ],
   "migrations": [
     {
       "tag": "v1",

@@ -3,6 +3,7 @@
 # Full contents of the GCP service account JSON key file, as a single-line string.
 GA_SERVICE_ACCOUNT_KEY={"type":"service_account","client_email":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n", ...}
 
-# Optional shared secret. If set, requests to this Worker must include:
-#   Authorization: Bearer <MCP_AUTH_TOKEN>
-MCP_AUTH_TOKEN=choose-a-long-random-string
+# The password required to sign in at the /authorize login page. Shared by
+# everyone who connects (there are no separate per-user accounts) since every
+# caller ends up using the same GA service account either way.
+MCP_LOGIN_PASSWORD=choose-a-long-random-string
